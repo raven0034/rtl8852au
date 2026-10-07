@@ -26,6 +26,25 @@
 #define DBG_RTW_CFG80211_MESH_CONF 0
 #endif
 
+#if defined(RHEL_RELEASE_CODE) && defined(RHEL_RELEASE_VERSION)
+#define RTW_RHEL_GE(_maj, _min) \
+	(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION((_maj), (_min)))
+#else
+#define RTW_RHEL_GE(_maj, _min) 0
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0) || RTW_RHEL_GE(10, 2)
+#define RTW_CFG80211_HAS_MONITOR_DEV
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 14, 0) || RTW_RHEL_GE(10, 2)
+#define RTW_CFG80211_HAS_TXPOWER_LINK_ID
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0) || RTW_RHEL_GE(10, 2)
+#define RTW_CFG80211_HAS_RADIO_IDX
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
 #define STATION_INFO_INACTIVE_TIME	BIT(NL80211_STA_INFO_INACTIVE_TIME)
 #define STATION_INFO_LLID			BIT(NL80211_STA_INFO_LLID)
@@ -3436,8 +3455,16 @@ static void cfg80211_rtw_abort_scan(struct wiphy *wiphy,
 }
 #endif /* LINUX_VERSION_CODE >= 4.5.0 */
 
-static int cfg80211_rtw_set_wiphy_params(struct wiphy *wiphy, u32 changed)
+static int cfg80211_rtw_set_wiphy_params(struct wiphy *wiphy,
+#ifdef RTW_CFG80211_HAS_RADIO_IDX
+	int radio_idx,
+#endif	
+	u32 changed)
 {
+#ifdef RTW_CFG80211_HAS_RADIO_IDX
+	(void)radio_idx;
+#endif
+
 #if 0
 	struct iwm_priv *iwm = wiphy_to_iwm(wiphy);
 
@@ -4415,12 +4442,18 @@ static int cfg80211_rtw_set_txpower(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct wireless_dev *wdev,
 #endif
+#ifdef RTW_CFG80211_HAS_RADIO_IDX
+	int radio_idx,
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)) || defined(COMPAT_KERNEL_RELEASE)
 	enum nl80211_tx_power_setting type, int mbm)
 #else
 	enum tx_power_setting type, int dbm)
 #endif
 {
+#ifdef RTW_CFG80211_HAS_RADIO_IDX
+	(void)radio_idx;
+#endif
 #if 0
 	struct iwm_priv *iwm = wiphy_to_iwm(wiphy);
 	int ret;
@@ -4455,8 +4488,20 @@ static int cfg80211_rtw_get_txpower(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct wireless_dev *wdev,
 #endif
+#ifdef RTW_CFG80211_HAS_RADIO_IDX
+	int radio_idx,
+#endif
+#ifdef RTW_CFG80211_HAS_TXPOWER_LINK_ID
+	unsigned int link_id,
+#endif
 	int *dbm)
 {
+#ifdef RTW_CFG80211_HAS_RADIO_IDX
+	(void)radio_idx;
+#endif
+#ifdef RTW_CFG80211_HAS_TXPOWER_LINK_ID
+	(void)link_id;
+#endif
 	RTW_INFO("%s\n", __func__);
 
 	*dbm = (12);
@@ -6349,7 +6394,10 @@ static void rtw_get_chbwoff_from_cfg80211_chan_def(
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)) */
 
 static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+#ifdef RTW_CFG80211_HAS_MONITOR_DEV
+	, struct net_device *dev
+	, struct cfg80211_chan_def *chandef
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	, struct cfg80211_chan_def *chandef
 #else
 	, struct ieee80211_channel *chan
@@ -6357,6 +6405,9 @@ static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy
 #endif
 	)
 {
+#ifdef RTW_CFG80211_HAS_MONITOR_DEV
+	(void)dev;
+#endif
 	_adapter *padapter = wiphy_to_adapter(wiphy);
 	u8 target_channal, target_offset, target_width, ht_option;
 

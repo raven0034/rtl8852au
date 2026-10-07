@@ -62,6 +62,12 @@
 #endif
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)) || \
+	(defined(RHEL_RELEASE_CODE) && \
+		(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 8)))
+#define from_timer timer_container_of
+#endif
+
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 5, 41))
 #include <linux/tqueue.h>
 #endif
